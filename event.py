@@ -5,20 +5,27 @@
 # Your andrew id: yeekitc
 #################################################
 
-import math, os, copy, decimal, datetime
+import math, os, copy, decimal, datetime, random
 from cmu_112_graphics import *
+from matrix import *
 import module_manager
 module_manager.review()
 
-class Event:
-    def __init__(self, name):
+
+# CalendarEvent("Gaming", )
+
+class CalendarEvent:
+    def __init__(self, name, timezone="EST", possibleDays=[], possibleTimes=[], usersAvail=dict()):
         self.timezones = {"EST", "PST"}
+        self.timezone = timezone
         self.name = name
-        self.possibleDays = []
-        self.possibleTimes = []
-        self.timeZone = "EST"
-        self.usersAvail = dict() # user:availability
-        self.usersPriority = []
+        self.id = random.randrange(0, 1e10) # never do this
+        self.possibleDays = possibleDays
+        self.possibleTimes = possibleTimes
+        self.usersAvail = usersAvail # {user:(availability, priority)}
+
+    def __repr__(self):
+        return f'CalendarEvent(name="{self.name}", timezone="{self.timezone}", possibleDays={self.possibleDays}, possibleTimes={self.possibleTimes}, usersAvail={self.usersAvail})'
 
     def setWeekdays(self, weekdays):
         self.possibleDays = weekdays
@@ -30,7 +37,7 @@ class Event:
         if timeZ in self.timezones:
             self.timeZone = timeZ
         else:
-            return "Please input a correct timezone."
+            return "Please input an available timezone."
 
     def inviteUser(self, user):
         self.users.append(user)

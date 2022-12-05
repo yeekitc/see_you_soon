@@ -91,22 +91,47 @@ class Proceed(Bbutton):
         pass
 
 class EventBox(Bbutton):
-    def __init__(self, app, x0, y0, x1, y1, Event, command):
-        self.event = Event
-        self.responded = Event in app.currentUser.myEvents
-        super().__init__(x0, y0, x1, y1, Event.title, command)
+    def __init__(self, app, x0, y0, x1, y1, e_id, command, mine=False):
+        self.event = e_id
+        if mine==False:
+            self.mine = e_id in app.currentUser.myEvents
+        else:
+            self.mine = mine
+        super().__init__(x0, y0, x1, y1, app.events[e_id].name, command, bgC="",
+            activeC="#DCEAEA", textC="#143936", activeTextC="#143936")
 
     def __repr__(self):
-        super().__repr__()
+        return f'EventBox(x0={self.x0}, y0={self.y0}, x1={self.x1}, y1={self.y1}, e_id={self.event}, mine={self.mine}, command={self.command})'
+
+    def onClick(self, app, event):
+        x, y = event.x, event.y
+        if not self.disabled:
+            if x>=self.x0 and x<=self.x1 and y>=self.y0 and y<=self.y1:
+                self.command(app, self.event)
+                return True
+        return False
 
     def drawButton(self, app, canvas):
-        if self.responded:
-            self.bgC = "#9FF8E2"
-            self.activeC = "#0F524C"
-            self.textC = "#143936"
-            self.activeTextC = "#FFFFFF"
+        width, height = self.x1-self.x0, self.y1-self.y0
+        font = "Avenir Next Medium", f"{int(height/2)}", "italic"
+        smallFont = "Avenir Next Medium", f"{int(height/3)}"
+        outlineC = "#143936"
+        if self.disabled:
+            canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, fill=self.disabledBgC, outline=outlineC)
+            canvas.create_text(self.x0+width/16, self.y0+height/2, text=self.text, font=font, fill=self.disabledTextC, anchor=W)
+            canvas.create_rectangle(self.x1-width/4, self.y0+5, self.x1-width/8, self.y1-5, fill=self.disabledTextC, outline=outlineC)
+            canvas.create_text(self.x1-width*3/16, self.y0+height/2, text="GO", font=smallFont, fill=self.disabledBgC)
+        elif self.hover:
+            if not self.mine:
+                canvas.create_rectangle(self.x0-3, self.y0-3, self.x1+3, self.y1+3, fill="#9FF8E2")
+            canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, fill=self.activeC, outline=outlineC)
+            canvas.create_text(self.x0+width/16, self.y0+height/2, text=self.text, font=font, fill=self.activeTextC, anchor=W)
+            canvas.create_rectangle(self.x1-width/4, self.y0+5, self.x1-width/8, self.y1-5, fill="#143936", outline=outlineC)
+            canvas.create_text(self.x1-width*3/16, self.y0+height/2, text="GO", font=smallFont, fill="#DCEAEA")
         else:
-            self.bgC = ""
-            self.activeC = "#DCEAEA"
-            self.textC = "#143936"
-            self.activeTextC = "#143936"
+            if not self.mine:
+                canvas.create_rectangle(self.x0-3, self.y0-3, self.x1+3, self.y1+3, fill="#9FF8E2")
+            canvas.create_rectangle(self.x0, self.y0, self.x1, self.y1, fill=self.bgC, outline=outlineC)
+            canvas.create_text(self.x0+width/16, self.y0+height/2, text=self.text, font=font, fill=self.textC, anchor=W)
+            canvas.create_rectangle(self.x1-width/4, self.y0+5, self.x1-width/8, self.y1-5, fill="#143936", outline=outlineC)
+            canvas.create_text(self.x1-width*3/16, self.y0+height/2, text="GO", font=smallFont, fill="#DCEAEA")

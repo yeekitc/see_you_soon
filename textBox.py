@@ -61,7 +61,9 @@ class TextBox:
         if self.selected:
             if event.key == "BackSpace":
                 self.inText = self.inText[:-1]
-            elif event.key in {"-", "_", ".", "@"}:
+            elif event.key == "Space":
+                self.inText += " "
+            elif event.key in {"-", "_", ".", "@", ",", "!", ".", "/", "'", '"'}:
                 self.inText += event.key
             elif event.key in set(string.ascii_letters) or event.key in set(string.digits):
                 self.inText += event.key
