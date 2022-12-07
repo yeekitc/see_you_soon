@@ -5,7 +5,7 @@
 # Your andrew id: yeekitc
 #################################################
 
-import math, os, copy, decimal, datetime, random, ast
+import random, ast
 from cmu_112_graphics import *
 from button import *
 from textBox import *
@@ -24,6 +24,7 @@ def splashScreenMode_appAttributes(app):
     app.welcInd = 0
     app.arrY = app.height/2+40
     app.arrDir = 1
+    # https://icons8.com/icon/39969/right-arrow
     app.welcArrow = app.scaleImage(app.loadImage('rightArrow.png'), 1/3)
     app.arrWidth, app.arrHeight = app.welcArrow.size
     app.slide = False
@@ -38,7 +39,6 @@ def splashScreenMode_redrawAll(app, canvas):
     canvas.create_text(app.width/2, app.height/2-40, 
         text=app.welcText[:app.welcInd+1], font=font, fill=app.textC)
     if app.welcInd+1 == len(app.welcText):
-        # https://icons8.com/icon/39969/right-arrow
         canvas.create_image(app.width/2-app.arrWidth/2, app.arrY, 
                             image=ImageTk.PhotoImage(app.welcArrow))
     if app.slide:
@@ -54,11 +54,11 @@ def splashScreenMode_timerFired(app):
     if app.welcInd+1 != len(app.welcText) and app.splashTimer%8 == 0:
         app.welcInd += 1
     elif app.slide:
-        if app.slideX != app.width:
-            app.slideX += 5
-            app.slide2X += 5
-        elif app.slideX0 != app.width:
-            app.slideX0 += 5
+        if app.slideX <= app.width:
+            app.slideX += 10
+            app.slide2X += 10
+        elif app.slideX0 <= app.width:
+            app.slideX0 += 10
         else:
             app.mode = "landingMode"
 
@@ -75,8 +75,6 @@ def splashScreenMode_keyPressed(app, event):
 #################################################
 
 def landingMode_appAttributes(app):
-    # app.matrixIm = app.scaleImage(app.loadImage('matrixPlaceholder.png'), 1)
-    # app.matrixImWidth, app.matrixImHeight = app.matrixIm.size
     app.landingMatrix = Matrix(app.width*13/24, app.navH+app.height*1/24, 
                  app.width, app.navH+app.height*21/24)
 
@@ -101,10 +99,8 @@ def landingMode_redrawAll(app, canvas):
     drawNav(app, canvas)
     canvas.create_text(app.width/14, app.height/2-20, text="Welcome to see_you_soon!", 
                     font=app.titleFont, fill=app.textC, anchor=W)
-    canvas.create_text(app.width/14, app.height/2+30, text="lorem ipsum text which will be a succinct description of the app and its function", 
+    canvas.create_text(app.width/14, app.height/2+30, text="gather your guests' availabilities and find the best time to meet, painlessly", 
                     font=font, fill=app.textC, width=app.width*10/24, anchor=NW)
-    # canvas.create_image(app.width*23/24-app.matrixImWidth/2, (app.height-app.navH)/2+app.navH, 
-    #                         image=ImageTk.PhotoImage(app.matrixIm))
 
     app.landingMatrix.drawMatrix(app, canvas)
 
@@ -113,7 +109,6 @@ def landingMode_redrawAll(app, canvas):
 ##########################################
 # Sign Up Page
 ##########################################
-# remember to change signedIn var
 def signUpMode_appAttributes(app):
     app.signUpUserBox = TextBox(app.width/2-200, app.height*39/128, app.width/2+200, app.height*45/128)
     app.signUpUserBox.setBgText("Enter your username/email")
@@ -144,11 +139,14 @@ def signUpMode_timerFired(app):
             app.signUpPWsMatch = True
         else:
             app.signUpPWsMatch = False
-        if app.signUpPWsMatch and (app.user not in app.accounts):
-            app.signUpDone.disabled = False
-        elif user in app.accounts:
+        
+        if user in app.accounts:
             app.signUpExists = True
-            app.signUpDone.disabled = True
+        else:
+            app.signUpExists = False
+
+        if app.signUpPWsMatch and not app.signUpExists:
+            app.signUpDone.disabled = False
         else:
             app.signUpDone.disabled = True
 
@@ -173,6 +171,9 @@ def signUpMode_mousePressed(app, event):
         writeFile(user+"_invited_events.g", "[]")
         writeFile(user+"_hosted_events.g", "[]")
         writeFile('accounts.txt', repr(app.accounts))
+
+        # clear all app.___.inTexts
+        signUpMode_appAttributes(app)
     app.haveAcc.onClick(app, event)
 
 def signUpMode_keyPressed(app, event):
@@ -229,7 +230,6 @@ def signInMode_timerFired(app):
 
     if userVal(app, user, pw):
         app.validUser = True
-        print(app.validUser)
     else:
         app.validUser = False
         
@@ -264,9 +264,7 @@ def signInMode_mousePressed(app, event):
         invitede = ast.literal_eval(readFile(user + "_invited_events.g"))
         hostede = ast.literal_eval(readFile(user + "_hosted_events.g"))
         u = User(user, "(encrypted)", invitedEvents=invitede, myEvents=hostede)
-        print(app.user)
         app.currentUser = u
-        print("IMPORTED!!!! ", app.currentUser)
         dashboardMode_updateEvents(app)
         app.mode = "dashboardMode"
     app.noAcc.onClick(app, event)
@@ -480,7 +478,8 @@ def createEventMode_mousePressed(app, event):
         userList = [app.user]
         for user in users.split(","):
             user = user.strip().lower()
-            userList += [user]
+            if user != app.user:
+                userList += [user]
         # save event
         id = addEvent(app, eName, dayList, timeList)
         for user in userList:
@@ -543,9 +542,29 @@ def createEventMode_redrawAll(app, canvas):
             font=font, fill=app.nopeC)
     app.eCreate.drawButton(app, canvas)
 
-    for user in app.accounts:
-        uList = uList + "\n" + user
-    canvas.create_text(app.width/2, app.navH+430, text=uList, font=font, fill="#137361")
+    uListofLists = []
+    uList = []
+    alphaAccs = sorted(app.accounts)
+    for user in range(len(alphaAccs)):
+        if user%10==0:
+            uListofLists += [uList]
+            uList = []
+        uList += [alphaAccs[user]]
+    uListofLists += [uList]
+    uListofLists = uListofLists[1:]
+
+    printUList = ""
+    userList = uListofLists[0]
+    for i in range(len(userList)):
+        printUList += userList[i]
+        for uListI in range(1, len(uListofLists)):
+            printUList += "\t"
+            if i < len(uListofLists[uListI]):
+                printUList += uListofLists[uListI][i]
+        if i < len(userList)-1:
+            printUList += "\n"
+
+    canvas.create_text(app.width/2, app.navH+420, text=printUList, font=font, fill="#137361", anchor=N)
 
 def createEventMode_sizeChanged(app):
     sizeChanged(app)
@@ -559,10 +578,18 @@ def dashboardMode_appAttributes(app):
     app.dashMyEs = []
 
 def dashboardMode_updateEvents(app):
-    for e in range(len(app.currentUser.invitedEvents)):
-        app.dashInvitedEs += [EventBox(app, app.width*4/32, app.height*31/128+50*e, app.width*14/32, app.height*31/128+50*(e+1), app.currentUser.invitedEvents[e], eventAvailMode)]
+    setOfEs = set()
     for e in range(len(app.currentUser.myEvents)):
         app.dashMyEs += [EventBox(app, app.width*18/32, app.height*31/128+50*e, app.width*28/32, app.height*31/128+50*(e+1), app.currentUser.myEvents[e], eventAvailMode, mine=True)]
+        setOfEs.add(app.currentUser.myEvents[e])
+    e2 = 0
+    while e2 in range(len(app.currentUser.invitedEvents)):
+        if app.currentUser.invitedEvents[e2] in setOfEs:
+            app.currentUser.invitedEvents.pop(e2)
+        else:
+            e2 += 1
+    for e3 in range(len(app.currentUser.invitedEvents)):
+        app.dashInvitedEs += [EventBox(app, app.width*4/32, app.height*31/128+50*e3, app.width*14/32, app.height*31/128+50*(e3+1), app.currentUser.invitedEvents[e3], eventAvailMode)]
 
 def dashboardMode_mouseMoved(app, event):
     hoverNav(app, event)
@@ -648,23 +675,12 @@ def recommendTime(app):
 
 def usersAvailable(app, r, c):
     _event = app.events[app.currentEventID]
-    # myAvail, myPri = _event.usersAvail[app.user]
-    # rows, cols = len(myAvail.matrix), len(myAvail.matrix[0])
-    # priMatrix = [[0]*cols for r in range(rows)]
     usersAvailable = []
     for user in _event.usersAvail:
         avail, pri = _event.usersAvail[user]
         if avail.matrix[r][c] > 0:
             usersAvailable += [user]
     app.usersAvailable = usersAvailable    
-
-def eventAvailMode_timerFired(app):
-    # if app.enableRec:
-    #     app.eventMatrix.enableRec = True
-    #     app.eventMatrix.recR, app.eventMatrix.recC = recommendTime(app)
-    # else:
-    #     app.eventMatrix.enableRec = False
-    pass
 
 def toggleRecs(app):
     app.enableRec = not app.enableRec
@@ -902,19 +918,9 @@ def modMode_mousePressed(app, event):
             userList += [user]
         # save event
         id = addEvent(app, mName, dayList, timeList)
-
-        # app.currentUser.invitedEvents += [id]
-        # currentuserdata = ast.literal_eval(readFile(app.user+"_invited_events.g"))
-        # currentuserdata += [id]
-        # # temporarily generate random priorities for heuristic algorithm
-        # randPriority = random.randint(0, 7)
-        # updateUserAvailMatrixGivenName(app, app.user, id, Matrix(app.width*2/24, app.navH+app.height*2/24, 
-        #         app.width*13/24, app.navH+app.height*22/24), randPriority)
-        # writeFile(app.user+"_invited_events.g", str(currentuserdata))
         
         for user in userList:
             if user == app.user:
-                # continue
                 app.currentUser.invitedEvents += [id]
             userdata = ast.literal_eval(readFile(user+"_invited_events.g"))
             userdata += [id]
@@ -984,25 +990,16 @@ def modMode_sizeChanged(app):
 ##########################################
 
 def appStarted(app):
-    # read data from file ---- put somewhere
+    # read data from file
     app.accounts = ast.literal_eval(readFile('accounts.txt'))
-    #app.userData = ast.literal_eval(readFile('userData.txt'))
+    # https://www.programiz.com/python-programming/methods/built-in/eval 
     app.events = eval(readFile('global_events.g'))
-    print(app.events)
-    
-    #print("Events are: ", app.events)
-    #print("I'm adding a new event\n")
-    #t = addEvent(app, "Dinner", ["Mon", "Tue"], [15, 16, 17])
-
-    #print("Now, the events are:", app.events)
-    #updateUserAvailMatrixTest(app, "h", t, Matrix(-1,-1,-1,-1))
-    #print("Now, the events are!!!! hi :) :", app.events)
 
     app.titleFont = "Open Sans", f"{int(app.width/30)}"
     app.font = "Open Sans", f"{int(app.width/60)}"
-    app.mode = 'signInMode'
+    app.mode = 'landingMode'
     app.timerDelay = 5
-    # app.makeAnMVCViolation = False
+    app.makeAnMVCViolation = False
     app.signedIn = False
     app.user = ""
     app.currentUser = None
@@ -1022,7 +1019,6 @@ def appStarted(app):
     app.logoWidth, app.logoHeight = app.logo.size
 
     # availability matrix
-    # app.currentEventID = ""
     app.rows = 18               # default: 9-5
     app.cols = 7                # default: 1 week
     app.marginX = 5             # horizontal margin around grid
@@ -1092,6 +1088,7 @@ def eventAvailMode(app, eid):
     if app.signedIn:
         app.currentEventID = eid
         eventAvailMode_updateUserMatrix(app)
+        eventAvailMode_updateEventMatrix(app)
         app.mode = "eventAvailMode"
     else:
         app.mode = "signInMode"
@@ -1182,7 +1179,6 @@ def clickNav(app, event):
 def drawNav(app, canvas):
     font = "Open Sans", f"{int(app.navH*7/24)}"
     canvas.create_rectangle(0, 0, app.width, app.navH, fill=app.emptyC)
-    # canvas.create_image(20+app.logoWidth/2, 20+app.logoHeight/2, image=ImageTk.PhotoImage(app.logo))
     drawLogo(app, canvas, 20, 20, (app.navH-40)*3+20)
     if app.signedIn:
         app.navDashboard.drawButton(app, canvas)
@@ -1209,14 +1205,12 @@ def appStopped(app):
         writeFile(_uname + "_invited_events.g", _invE)
         writeFile(_uname + "_hosted_events.g",  _hostE)
         writeFile("global_events.g", str(app.events))
-        print("yah", app.events)
     else:
         print("No user was logged in, so no data was modified. Have a wonderful day. :)\n")
 
 def addEvent(app, name, possibleDays, possibleTimes):
     e = CalendarEvent(name, possibleDays=possibleDays, possibleTimes=possibleTimes)
     app.events[e.id] = e
-    print("hi", type(app.currentUser.myEvents))
     app.currentUser.myEvents += [e.id]
     return e.id
 
