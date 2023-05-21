@@ -10,4 +10,4 @@ To run see_you_soon, download the repository and execute main.py.
 
 # Try it out!
 ---
-To load sample data and take see_you_soon for a test drive, log into the account "yk" with the password "ykc" (or "js", password "josiah") upon launch. Events will be preloaded. Feel free to poke around and dabble in each of the different features!
+To load sample data and take see_you_soon for a test drive, log into the account "yk" with the password "ykc" upon launch. Events will be preloaded. Feel free to poke around and dabble in each of the different features!
